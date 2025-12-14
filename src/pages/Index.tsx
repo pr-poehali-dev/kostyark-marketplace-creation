@@ -42,6 +42,7 @@ const Index = () => {
   const [minRating, setMinRating] = useState(0);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isCartOpen, setIsCartOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({
     cardNumber: '',
     cardHolder: '',
@@ -110,6 +111,7 @@ const Index = () => {
     alert(`Платеж на сумму ${totalAmount}₽ успешно обработан! Спасибо за покупку в Костярке! ⚙️`);
     setCart([]);
     setIsCheckoutOpen(false);
+    setIsCartOpen(false);
     setPaymentForm({ cardNumber: '', cardHolder: '', expiry: '', cvv: '' });
   };
 
@@ -467,7 +469,7 @@ const Index = () => {
               ))}
             </div>
 
-            <Sheet>
+            <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
               <SheetTrigger asChild>
                 <Button variant="outline" className="relative neon-border">
                   <Icon name="ShoppingCart" size={20} />
@@ -528,74 +530,17 @@ const Index = () => {
                           <span>Итого:</span>
                           <span className="text-primary">{totalAmount}₽</span>
                         </div>
-                        <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
-                          <DialogTrigger asChild>
-                            <Button className="w-full neon-border" size="lg">
-                              <Icon name="CreditCard" size={20} className="mr-2" />
-                              Оформить заказ
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[500px]">
-                            <DialogHeader>
-                              <DialogTitle className="neon-glow">Оплата заказа</DialogTitle>
-                              <DialogDescription>
-                                Введите данные карты для оплаты заказа на сумму {totalAmount}₽
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 py-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="card-number">Номер карты</Label>
-                                <Input
-                                  id="card-number"
-                                  placeholder="1234 5678 9012 3456"
-                                  value={paymentForm.cardNumber}
-                                  onChange={(e) => setPaymentForm({...paymentForm, cardNumber: e.target.value})}
-                                  className="neon-border"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="card-holder">Имя владельца</Label>
-                                <Input
-                                  id="card-holder"
-                                  placeholder="IVAN IVANOV"
-                                  value={paymentForm.cardHolder}
-                                  onChange={(e) => setPaymentForm({...paymentForm, cardHolder: e.target.value})}
-                                  className="neon-border"
-                                />
-                              </div>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="expiry">Срок действия</Label>
-                                  <Input
-                                    id="expiry"
-                                    placeholder="MM/YY"
-                                    value={paymentForm.expiry}
-                                    onChange={(e) => setPaymentForm({...paymentForm, expiry: e.target.value})}
-                                    className="neon-border"
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="cvv">CVV</Label>
-                                  <Input
-                                    id="cvv"
-                                    placeholder="123"
-                                    type="password"
-                                    maxLength={3}
-                                    value={paymentForm.cvv}
-                                    onChange={(e) => setPaymentForm({...paymentForm, cvv: e.target.value})}
-                                    className="neon-border"
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button onClick={handlePayment} className="w-full neon-border" size="lg">
-                                <Icon name="Lock" size={20} className="mr-2" />
-                                Оплатить {totalAmount}₽
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                        <Button 
+                          className="w-full neon-border" 
+                          size="lg"
+                          onClick={() => {
+                            setIsCartOpen(false);
+                            setTimeout(() => setIsCheckoutOpen(true), 100);
+                          }}
+                        >
+                          <Icon name="CreditCard" size={20} className="mr-2" />
+                          Оформить заказ
+                        </Button>
                       </div>
                     </>
                   )}
@@ -605,6 +550,69 @@ const Index = () => {
           </div>
         </div>
       </nav>
+
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="neon-glow">Оплата заказа</DialogTitle>
+            <DialogDescription>
+              Введите данные карты для оплаты заказа на сумму {totalAmount}₽
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="card-number">Номер карты</Label>
+              <Input
+                id="card-number"
+                placeholder="1234 5678 9012 3456"
+                value={paymentForm.cardNumber}
+                onChange={(e) => setPaymentForm({...paymentForm, cardNumber: e.target.value})}
+                className="neon-border"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="card-holder">Имя владельца</Label>
+              <Input
+                id="card-holder"
+                placeholder="IVAN IVANOV"
+                value={paymentForm.cardHolder}
+                onChange={(e) => setPaymentForm({...paymentForm, cardHolder: e.target.value})}
+                className="neon-border"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="expiry">Срок действия</Label>
+                <Input
+                  id="expiry"
+                  placeholder="MM/YY"
+                  value={paymentForm.expiry}
+                  onChange={(e) => setPaymentForm({...paymentForm, expiry: e.target.value})}
+                  className="neon-border"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cvv">CVV</Label>
+                <Input
+                  id="cvv"
+                  placeholder="123"
+                  type="password"
+                  maxLength={3}
+                  value={paymentForm.cvv}
+                  onChange={(e) => setPaymentForm({...paymentForm, cvv: e.target.value})}
+                  className="neon-border"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handlePayment} className="w-full neon-border" size="lg">
+              <Icon name="Lock" size={20} className="mr-2" />
+              Оплатить {totalAmount}₽
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <main className="container mx-auto px-4 py-8">
         {currentPage === 'home' && renderHome()}
