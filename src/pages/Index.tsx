@@ -34,6 +34,27 @@ interface PaymentForm {
   cvv: string;
 }
 
+interface ProductRequest {
+  id: number;
+  name: string;
+  price: number;
+  seller: string;
+  category: string;
+  description: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+}
+
+interface AboutContent {
+  title: string;
+  description: string[];
+  stats: {
+    products: number;
+    sellers: number;
+    rating: number;
+  };
+}
+
 const Index = () => {
   const [currentPage, setCurrentPage] = useState('home');
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,8 +70,9 @@ const Index = () => {
     expiry: '',
     cvv: ''
   });
-
-  const products: Product[] = [
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [products, setProducts] = useState<Product[]>([
     { id: 1, name: 'Паровой Хронометр', price: 4500, seller: 'Мастер Григорий', rating: 4.8, reviews: 156, category: 'watches', image: '⌚' },
     { id: 2, name: 'Медная Шестеренка', price: 890, seller: 'Заводъ №7', rating: 4.5, reviews: 89, category: 'parts', image: '⚙️' },
     { id: 3, name: 'Латунный Компас', price: 2300, seller: 'Навигаторъ', rating: 4.9, reviews: 234, category: 'instruments', image: '🧭' },
@@ -59,7 +81,20 @@ const Index = () => {
     { id: 6, name: 'Манометр Давления', price: 1450, seller: 'Измеритель', rating: 4.4, reviews: 67, category: 'instruments', image: '📊' },
     { id: 7, name: 'Кожаный Ремень', price: 670, seller: 'Кожевникъ', rating: 4.7, reviews: 145, category: 'accessories', image: '👔' },
     { id: 8, name: 'Карманные Часы', price: 3200, seller: 'Часовщикъ', rating: 4.8, reviews: 289, category: 'watches', image: '⏰' },
-  ];
+  ]);
+  const [productRequests, setProductRequests] = useState<ProductRequest[]>([]);
+  const [aboutContent, setAboutContent] = useState<AboutContent>({
+    title: 'Костярокъ',
+    description: [
+      'Костярокъ — первый паровой маркетплейс Империи, объединяющий мастеров механизмов и любителей стимпанк-культуры.',
+      'Основан в 1889 году мастером Григорием Костяровым, наш маркетплейс стал домом для тысяч уникальных изделий: от микроскопических часовых механизмов до полноразмерных паровых двигателей.'
+    ],
+    stats: { products: 2500, sellers: 450, rating: 4.8 }
+  });
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [adminTab, setAdminTab] = useState('products');
+
+
 
   const categories = [
     { id: 'all', name: 'Все категории', icon: 'Package' },
@@ -302,28 +337,25 @@ const Index = () => {
       <h2 className="text-3xl font-bold mb-6 neon-glow">О нас</h2>
       <div className="space-y-4 text-lg">
         <p>
-          <strong className="text-primary">Костярокъ</strong> — первый паровой маркетплейс Империи, 
-          объединяющий мастеров механизмов и любителей стимпанк-культуры.
+          <strong className="text-primary">{aboutContent.title}</strong> — {aboutContent.description[0]}
         </p>
         <p>
-          Основан в 1889 году мастером Григорием Костяровым, наш маркетплейс стал домом 
-          для тысяч уникальных изделий: от микроскопических часовых механизмов до 
-          полноразмерных паровых двигателей.
+          {aboutContent.description[1]}
         </p>
         <div className="grid md:grid-cols-3 gap-6 mt-8">
           <div className="text-center p-6 rounded-lg bg-card/50">
             <div className="text-4xl mb-2">⚙️</div>
-            <p className="text-3xl font-bold text-primary">2500+</p>
+            <p className="text-3xl font-bold text-primary">{aboutContent.stats.products}+</p>
             <p className="text-muted-foreground">Товаров</p>
           </div>
           <div className="text-center p-6 rounded-lg bg-card/50">
             <div className="text-4xl mb-2">👤</div>
-            <p className="text-3xl font-bold text-primary">450+</p>
+            <p className="text-3xl font-bold text-primary">{aboutContent.stats.sellers}+</p>
             <p className="text-muted-foreground">Мастеров</p>
           </div>
           <div className="text-center p-6 rounded-lg bg-card/50">
             <div className="text-4xl mb-2">⭐</div>
-            <p className="text-3xl font-bold text-primary">4.8</p>
+            <p className="text-3xl font-bold text-primary">{aboutContent.stats.rating}</p>
             <p className="text-muted-foreground">Средний рейтинг</p>
           </div>
         </div>
@@ -364,21 +396,44 @@ const Index = () => {
     </div>
   );
 
+  const handleProductRequest = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const newRequest: ProductRequest = {
+      id: Date.now(),
+      name: formData.get('product-name') as string,
+      price: Number(formData.get('product-price')),
+      seller: formData.get('seller-name') as string,
+      category: formData.get('product-category') as string,
+      description: formData.get('product-desc') as string,
+      status: 'pending',
+      submittedAt: new Date().toLocaleString('ru-RU')
+    };
+    setProductRequests(prev => [...prev, newRequest]);
+    form.reset();
+    alert('Заявка отправлена! Администратор рассмотрит её в ближайшее время.');
+  };
+
   const renderAddProduct = () => (
     <Card className="neon-card p-8 max-w-2xl mx-auto">
       <h2 className="text-3xl font-bold mb-6 neon-glow">Выставить товар</h2>
-      <form className="space-y-4">
+      <form className="space-y-4" onSubmit={handleProductRequest}>
+        <div className="space-y-2">
+          <Label htmlFor="seller-name">Ваше имя / Название магазина</Label>
+          <Input id="seller-name" name="seller-name" placeholder="Мастер Иванъ" className="neon-border" required />
+        </div>
         <div className="space-y-2">
           <Label htmlFor="product-name">Название товара</Label>
-          <Input id="product-name" placeholder="Паровой хронометр..." className="neon-border" />
+          <Input id="product-name" name="product-name" placeholder="Паровой хронометр..." className="neon-border" required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="product-price">Цена (₽)</Label>
-          <Input id="product-price" type="number" placeholder="1000" className="neon-border" />
+          <Input id="product-price" name="product-price" type="number" placeholder="1000" className="neon-border" required />
         </div>
         <div className="space-y-2">
           <Label htmlFor="product-category">Категория</Label>
-          <Select>
+          <Select name="product-category" required>
             <SelectTrigger id="product-category" className="neon-border">
               <SelectValue placeholder="Выберите категорию" />
             </SelectTrigger>
@@ -393,14 +448,16 @@ const Index = () => {
           <Label htmlFor="product-desc">Описание</Label>
           <Textarea 
             id="product-desc" 
+            name="product-desc"
             placeholder="Подробное описание вашего товара..." 
             rows={4}
             className="neon-border"
+            required
           />
         </div>
         <Button type="submit" className="w-full neon-border" size="lg">
           <Icon name="Upload" size={20} className="mr-2" />
-          Выставить товар
+          Отправить на модерацию
         </Button>
       </form>
     </Card>
@@ -438,6 +495,335 @@ const Index = () => {
     </Card>
   );
 
+  const renderAdmin = () => {
+    if (!isAdmin) {
+      return (
+        <Card className="neon-card p-8 max-w-md mx-auto">
+          <h2 className="text-3xl font-bold mb-6 neon-glow text-center">Админ-панель</h2>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (adminPassword === 'admin123') {
+              setIsAdmin(true);
+              setAdminPassword('');
+            } else {
+              alert('Неверный пароль!');
+            }
+          }} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-password">Пароль</Label>
+              <Input 
+                id="admin-password" 
+                type="password" 
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                placeholder="Введите пароль..." 
+                className="neon-border"
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full neon-border">
+              <Icon name="Lock" size={20} className="mr-2" />
+              Войти
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">Пароль по умолчанию: admin123</p>
+          </form>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-3xl font-bold neon-glow">Админ-панель</h2>
+          <Button variant="outline" onClick={() => {
+            setIsAdmin(false);
+            setCurrentPage('home');
+          }}>
+            <Icon name="LogOut" size={20} className="mr-2" />
+            Выйти
+          </Button>
+        </div>
+
+        <div className="flex gap-2">
+          <Button 
+            variant={adminTab === 'products' ? 'default' : 'outline'}
+            onClick={() => setAdminTab('products')}
+            className={adminTab === 'products' ? 'neon-border' : ''}
+          >
+            <Icon name="Package" size={16} className="mr-2" />
+            Товары
+          </Button>
+          <Button 
+            variant={adminTab === 'requests' ? 'default' : 'outline'}
+            onClick={() => setAdminTab('requests')}
+            className={adminTab === 'requests' ? 'neon-border' : ''}
+          >
+            <Icon name="Inbox" size={16} className="mr-2" />
+            Заявки ({productRequests.filter(r => r.status === 'pending').length})
+          </Button>
+          <Button 
+            variant={adminTab === 'about' ? 'default' : 'outline'}
+            onClick={() => setAdminTab('about')}
+            className={adminTab === 'about' ? 'neon-border' : ''}
+          >
+            <Icon name="FileEdit" size={16} className="mr-2" />
+            О нас
+          </Button>
+        </div>
+
+        {adminTab === 'products' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-2xl font-bold text-primary">Управление товарами</h3>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="neon-border" onClick={() => setEditingProduct(null)}>
+                    <Icon name="Plus" size={20} className="mr-2" />
+                    Добавить товар
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle className="neon-glow">
+                      {editingProduct ? 'Редактировать товар' : 'Новый товар'}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.currentTarget);
+                    const productData: Product = {
+                      id: editingProduct?.id || Date.now(),
+                      name: formData.get('name') as string,
+                      price: Number(formData.get('price')),
+                      seller: formData.get('seller') as string,
+                      category: formData.get('category') as string,
+                      image: formData.get('image') as string,
+                      rating: editingProduct?.rating || 4.5,
+                      reviews: editingProduct?.reviews || 0
+                    };
+                    
+                    if (editingProduct) {
+                      setProducts(prev => prev.map(p => p.id === editingProduct.id ? productData : p));
+                    } else {
+                      setProducts(prev => [...prev, productData]);
+                    }
+                    setEditingProduct(null);
+                    (document.querySelector('[role="dialog"]') as HTMLElement)?.click();
+                  }} className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Название</Label>
+                      <Input name="name" defaultValue={editingProduct?.name} required className="neon-border" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Цена</Label>
+                      <Input name="price" type="number" defaultValue={editingProduct?.price} required className="neon-border" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Продавец</Label>
+                      <Input name="seller" defaultValue={editingProduct?.seller} required className="neon-border" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Категория</Label>
+                      <Select name="category" defaultValue={editingProduct?.category} required>
+                        <SelectTrigger className="neon-border">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.filter(c => c.id !== 'all').map(cat => (
+                            <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Эмодзи</Label>
+                      <Input name="image" defaultValue={editingProduct?.image} placeholder="⚙️" required className="neon-border" />
+                    </div>
+                    <Button type="submit" className="w-full neon-border">
+                      <Icon name="Save" size={20} className="mr-2" />
+                      Сохранить
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {products.map(product => (
+                <Card key={product.id} className="neon-card p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="text-4xl">{product.image}</div>
+                    <div className="flex gap-2">
+                      <Button 
+                        size="icon" 
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingProduct(product);
+                          setTimeout(() => {
+                            document.querySelector('[role="dialog"]')?.querySelector('button')?.click();
+                          }, 100);
+                        }}
+                      >
+                        <Icon name="Pencil" size={16} />
+                      </Button>
+                      <Button 
+                        size="icon" 
+                        variant="ghost"
+                        onClick={() => {
+                          if (confirm('Удалить товар?')) {
+                            setProducts(prev => prev.filter(p => p.id !== product.id));
+                          }
+                        }}
+                      >
+                        <Icon name="Trash2" size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                  <h4 className="font-bold text-primary">{product.name}</h4>
+                  <p className="text-sm text-muted-foreground">{product.seller}</p>
+                  <p className="text-lg font-bold mt-2">{product.price}₽</p>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {adminTab === 'requests' && (
+          <div className="space-y-4">
+            <h3 className="text-2xl font-bold text-primary">Заявки на товары</h3>
+            {productRequests.length === 0 ? (
+              <Card className="neon-card p-8 text-center">
+                <p className="text-muted-foreground">Заявок пока нет</p>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {productRequests.map(request => (
+                  <Card key={request.id} className="neon-card p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h4 className="font-bold text-lg text-primary">{request.name}</h4>
+                          <Badge variant={
+                            request.status === 'approved' ? 'default' : 
+                            request.status === 'rejected' ? 'destructive' : 'secondary'
+                          }>
+                            {request.status === 'pending' ? 'Ожидает' : 
+                             request.status === 'approved' ? 'Одобрено' : 'Отклонено'}
+                          </Badge>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-2 text-sm">
+                          <p><span className="text-muted-foreground">Продавец:</span> {request.seller}</p>
+                          <p><span className="text-muted-foreground">Цена:</span> {request.price}₽</p>
+                          <p><span className="text-muted-foreground">Категория:</span> {
+                            categories.find(c => c.id === request.category)?.name
+                          }</p>
+                          <p><span className="text-muted-foreground">Дата:</span> {request.submittedAt}</p>
+                        </div>
+                        <p className="mt-2 text-muted-foreground">{request.description}</p>
+                      </div>
+                      {request.status === 'pending' && (
+                        <div className="flex gap-2 ml-4">
+                          <Button 
+                            size="sm"
+                            onClick={() => {
+                              const newProduct: Product = {
+                                id: Date.now(),
+                                name: request.name,
+                                price: request.price,
+                                seller: request.seller,
+                                category: request.category,
+                                image: '📦',
+                                rating: 4.5,
+                                reviews: 0
+                              };
+                              setProducts(prev => [...prev, newProduct]);
+                              setProductRequests(prev => prev.map(r => 
+                                r.id === request.id ? { ...r, status: 'approved' as const } : r
+                              ));
+                            }}
+                          >
+                            <Icon name="Check" size={16} className="mr-1" />
+                            Одобрить
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => {
+                              setProductRequests(prev => prev.map(r => 
+                                r.id === request.id ? { ...r, status: 'rejected' as const } : r
+                              ));
+                            }}
+                          >
+                            <Icon name="X" size={16} className="mr-1" />
+                            Отклонить
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {adminTab === 'about' && (
+          <Card className="neon-card p-6">
+            <h3 className="text-2xl font-bold text-primary mb-4">Редактировать «О нас»</h3>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              setAboutContent({
+                title: formData.get('title') as string,
+                description: [
+                  formData.get('desc1') as string,
+                  formData.get('desc2') as string
+                ],
+                stats: {
+                  products: Number(formData.get('stats-products')),
+                  sellers: Number(formData.get('stats-sellers')),
+                  rating: Number(formData.get('stats-rating'))
+                }
+              });
+              alert('Данные обновлены!');
+            }} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Название</Label>
+                <Input name="title" defaultValue={aboutContent.title} required className="neon-border" />
+              </div>
+              <div className="space-y-2">
+                <Label>Описание (абзац 1)</Label>
+                <Textarea name="desc1" defaultValue={aboutContent.description[0]} rows={3} required className="neon-border" />
+              </div>
+              <div className="space-y-2">
+                <Label>Описание (абзац 2)</Label>
+                <Textarea name="desc2" defaultValue={aboutContent.description[1]} rows={3} required className="neon-border" />
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Товаров</Label>
+                  <Input name="stats-products" type="number" defaultValue={aboutContent.stats.products} required className="neon-border" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Мастеров</Label>
+                  <Input name="stats-sellers" type="number" defaultValue={aboutContent.stats.sellers} required className="neon-border" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Рейтинг</Label>
+                  <Input name="stats-rating" type="number" step="0.1" defaultValue={aboutContent.stats.rating} required className="neon-border" />
+                </div>
+              </div>
+              <Button type="submit" className="w-full neon-border">
+                <Icon name="Save" size={20} className="mr-2" />
+                Сохранить изменения
+              </Button>
+            </form>
+          </Card>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur border-b border-primary/30 neon-border">
@@ -448,7 +834,7 @@ const Index = () => {
               <span className="text-2xl font-bold neon-glow">КОСТЯРОКЪ</span>
             </div>
             
-            <div className="hidden md:flex gap-4">
+            <div className="hidden md:flex gap-4 items-center">
               {[
                 { id: 'home', label: 'Главная', icon: 'Home' },
                 { id: 'catalog', label: 'Каталог', icon: 'Package' },
@@ -467,6 +853,15 @@ const Index = () => {
                   {item.label}
                 </Button>
               ))}
+              <Separator orientation="vertical" className="h-8" />
+              <Button
+                variant={currentPage === 'admin' ? 'default' : 'outline'}
+                onClick={() => setCurrentPage('admin')}
+                className={currentPage === 'admin' ? 'neon-border' : ''}
+              >
+                <Icon name="Settings" size={16} className="mr-2" />
+                Админ
+              </Button>
             </div>
 
             <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
@@ -621,6 +1016,7 @@ const Index = () => {
         {currentPage === 'sellers' && renderSellers()}
         {currentPage === 'add' && renderAddProduct()}
         {currentPage === 'contacts' && renderContacts()}
+        {currentPage === 'admin' && renderAdmin()}
       </main>
 
       <footer className="bg-card border-t border-primary/30 neon-border mt-16">
